@@ -1,0 +1,100 @@
+# Base directory of input data
+input_dir: "data/inputs"
+
+# Base directory to save outputs
+output_dir: "data/outputs"
+
+# Directory of multilayer networks to analyze for community structure
+networks_dir: "eeg/error"
+
+# Multilayer networks whose community structure will be found:
+#
+#   - network: The multilayer network file without extension. The runner will check 
+#              'input_dir/networks_dir' for a file named 'network.gml' or 'network.gml.gz'. 
+#      
+#   - null_networks_type: The type of null networks to create. The runner will first check 
+#                         'output_dir/networks_dir/network' to see if there is a folder 
+#                         named 'null_networks_type'. If there is a folder with already created null 
+#                         networks, the runner will use these null networks. Otherwise it will create
+#                         new ones. TODO: Give possible input values
+networks: 
+    - network_file: "subject_1"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_2"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_3"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_4"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_5"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_6"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_7"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_8"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_9"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_10"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_11"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_12"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_13"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_14"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_15"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_16"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_17"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_18"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_19"
+      null_networks_type: "weight_and_layer_preserved"
+
+    - network_file: "subject_20"
+      null_networks_type: "weight_and_layer_preserved"
+
+# Type of the null model to use in modularity definition
+# It can be either "configuration" or "erdos-renyi"
+null_model: "configuration"
+
+# Resolution parameter
+# TODO: Describe min, max, num_points
+gamma:
+    - min: 0.9
+    - max: 1.1
+    - n_points: 20
+
+# Interlayer scaling 
+# TODO: Describe min, max, num_points
+omega:
+    - min: 0.0
+    - max: 0.1
+    - n_points: 20
+
+# Number of times to run modularity for each network
+n_runs: 100
