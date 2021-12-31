@@ -5,6 +5,7 @@ import os
 import igraph as ig
 
 def from_gml(file_name):
+    # TODO: check if the read graph is multilayer?
     return ig.read(file_name, format="gml")
 
 def from_zipped_gml(file_name):
