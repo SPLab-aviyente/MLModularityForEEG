@@ -96,8 +96,8 @@ gamma:
 # TODO: Describe min, max, num_points
 omega:
     - min: 0.0
-    - max: 0.1
-    - n_points: 20
+    - max: 1.0
+    - n_points: 50
 
 # Number of times to run modularity for each network
 n_runs: 100

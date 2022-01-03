@@ -179,7 +179,7 @@ def find_comms(G, w_intra, p_intra, w_inter, p_inter, resolution=1, interlayer_s
     for r in range(n_runs):
         c = leidenalg.find_partition(G, leidenalg.CPMVertexPartition, n_iterations=-1, 
                                      weights=b, resolution_parameter=0, 
-                                     seed=int(rng.random()*1e9))
+                                     seed=int(rng.random()*1e9 + r))
         partitions[:, r] = np.array(c.membership, dtype=int)
         modularities[r] = np.sum(B*(partitions[:, r][..., None] == partitions[:, r]).astype(float))
 
