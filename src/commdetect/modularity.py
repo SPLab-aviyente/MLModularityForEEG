@@ -1,4 +1,5 @@
 import numpy as np
+import leidenalg
 
 from numba import njit
 from scipy.spatial.distance import squareform
@@ -6,6 +7,7 @@ from scipy.spatial.distance import squareform
 from .. import mlgraph
 
 # TODO: I need to check if the provided graph is multilayer 
+# TODO: A better way to implement this by extending leidenalg?
 
 @njit
 def _get_pijs_conf(edgelist, node_layers, lw_strength, layer_sizes):
@@ -162,5 +164,23 @@ def get_supra_mod_as_mat(G, null_model="configuration", resolution=1, interlayer
 
     return np.block(A)
 
-def find_comms(G, w, p, resolution=1, interlayer_scale = 1, n_runs = 1):
-    pass
+def find_comms(G, w_intra, p_intra, w_inter, p_inter, resolution=1, interlayer_scale = 1, n_runs = 1):
+    # TODO: Docstring
+    # modularity matrix as a vector
+    b = (w_intra - resolution*p_intra) - interlayer_scale*(w_inter - resolution*p_inter)
+    edgelist = np.array(G.get_edgelist())
+    B = _get_B(G.vcount(), edgelist, b) # modularity matrix
+
+    n = G.vcount()
+    rng = np.random.default_rng()
+
+    partitions = np.zeros((n, n_runs), dtype=int)
+    modularities = np.zeros(n_runs)
+    for r in range(n_runs):
+        c = leidenalg.find_partition(G, leidenalg.CPMVertexPartition, n_iterations=-1, 
+                                     weights=b, resolution_parameter=0, 
+                                     seed=int(rng.random()*1e9))
+        partitions[:, r] = np.array(c.membership, dtype=int)
+        modularities[r] = np.sum(B*(partitions[:, r][..., None] == partitions[:, r]).astype(float))
+
+    return partitions, modularities
