@@ -2,8 +2,12 @@ import os
 import argparse
 
 import yaml
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 from src import mlgraph
+from src.commdetect import modularity
 
 def get_config_file():
     # get the path to config file
@@ -53,7 +57,7 @@ def read_networks(inputs):
 
     return graphs
 
-def find_communities(inputs):
+def find_communities(inputs, graphs):
     pass
 
 def create_null_networks():
@@ -68,6 +72,9 @@ def select_params():
 def find_consensus_comms():
     pass
 
+def find_group_comms():
+    pass
+
 if __name__ == "__main__":
     
     config_file = get_config_file() # get path to the config file
@@ -79,16 +86,15 @@ if __name__ == "__main__":
         print("There is no network to analyze, runner is aborted.")
         quit()
 
-    for net_name, net in graphs.items():
-        print(net.summary())
+    find_communities(inputs, graphs) # find the communities of observed multilayer graphs
 
-    # find_communities(inputs, graphs) # find the communities of observed multilayer graphs
+    create_null_networks() # create or read null networks 
 
-    # create_null_networks() # create or read null networks 
+    find_null_communities()
 
-    # find_null_communities()
+    select_params()
 
-    # select_params()
+    find_consensus_comms()
 
-    # find_consensus_comms()
-
+    if len(graphs) > 1:
+        find_group_comms()
