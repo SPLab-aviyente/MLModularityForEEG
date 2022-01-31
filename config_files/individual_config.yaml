@@ -90,14 +90,14 @@ null_model: "configuration"
 gamma:
     - min: 0.9
     - max: 1.1
-    - n_points: 20
+    - n_points: 1
 
 # Interlayer scaling 
 # TODO: Describe min, max, num_points
 omega:
     - min: 0.0
     - max: 1.0
-    - n_points: 50
+    - n_points: 1
 
 # Number of times to run modularity for each network
 n_runs: 100
