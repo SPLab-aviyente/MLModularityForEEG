@@ -1,5 +1,6 @@
 import os
 import argparse
+import glob
 from pathlib import Path
 from itertools import product
 from datetime import datetime
@@ -10,6 +11,7 @@ import pandas as pd
 
 from src import mlgraph
 from src.commdetect import modularity
+from src.nulls import weighted_undirected as wu_nulls
 
 def get_config_file():
     # get the path to config file
@@ -55,7 +57,7 @@ def read_networks(inputs):
         elif gmlz_exists:
             graphs[network_name] = mlgraph.read.from_zipped_gml(network_path + ".gml.gz")
         else:
-            print("File '{}' does not exists, skipping this network.".format(network_name))
+            print("File '{}' does not exist, skipping this network.".format(network_name))
 
     return graphs
 
@@ -112,8 +114,63 @@ def find_communities(inputs, graphs):
         save_file = os.path.join(save_dir, save_name)
         modularities_df.to_csv(save_file)
 
-def create_null_networks():
-    pass
+def create_null_networks(inputs, graphs):
+    output_dir = inputs["output_dir"]
+    networks_dir = inputs["networks_dir"]
+
+    null_names = {net["network"]: net["null_networks_type"] for net in inputs["networks"]}
+
+    null_functions = {
+        "weight_preserved": lambda G: wu_nulls.weight_preserved(G), 
+        "weight_and_layer_preserved": lambda G: wu_nulls.weight_preserved(G, preserve_layer=True), 
+    }
+
+    nulls = {}
+    for graph_name, G in graphs.items():
+        
+        null_name = null_names[graph_name]
+        nulls_dir = os.path.join(output_dir, networks_dir, graph_name, null_name)
+
+        n_runs = inputs["n_runs"]
+
+        create_nulls = True
+        if os.path.isdir(nulls_dir): 
+            # There exists a folder with null networks. We will check if there exist at least 
+            # n_runs number of null networks in this folder since we need enough samples to make 
+            # any statictical conclusion. If not, we will create new nulls. 
+
+            # get gml and gziped files
+            files = glob.glob(os.path.join(nulls_dir, "*.gml")) + \
+                    glob.glob(os.path.join(nulls_dir, "*.gml.gz"))
+
+            if len(files) >= n_runs:
+                create_nulls = False
+            else:
+                create_nulls = True
+
+        nulls[graph_name] = []
+        if create_nulls:
+            # Create new null networks
+            for r in range(n_runs):
+                Gn = null_functions[null_name](G)
+                nulls[graph_name].append(Gn)
+
+                # make sure the null directory exists
+                Path(nulls_dir).mkdir(parents=True, exist_ok=True)
+
+                # Save the null
+                file_name = os.path.join(nulls_dir, "network_{:d}".format(r+1))
+                mlgraph.write.to_zipped_gml(Gn, file_name)
+
+        else:
+            # Read existing null networks
+            for file in files:
+                if file.endswith(".gml"):
+                    nulls[graph_name].append(mlgraph.read.from_gml(file))
+                elif file.endswith(".gml.gz"):
+                    nulls[graph_name].append(mlgraph.read.from_gml(file))
+
+    return nulls
 
 def find_null_communities():
     pass
@@ -138,9 +195,9 @@ if __name__ == "__main__":
         print("There is no network to analyze, runner is aborted.")
         quit()
 
-    find_communities(inputs, graphs) # find the communities of observed multilayer graphs
+    # find_communities(inputs, graphs) # find the communities of observed multilayer graphs
 
-    create_null_networks() # create or read null networks
+    create_null_networks(inputs, graphs) # create or read null networks
 
     find_null_communities()
 
