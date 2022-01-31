@@ -122,7 +122,9 @@ def create_null_networks(inputs, graphs):
 
     null_functions = {
         "weight_preserved": lambda G: wu_nulls.weight_preserved(G), 
-        "weight_and_layer_preserved": lambda G: wu_nulls.weight_preserved(G, preserve_layer=True), 
+        "weight_and_layer_preserved": lambda G: wu_nulls.weight_preserved(G, preserve_layer=True),
+        "strength_preserved": lambda G: wu_nulls.strength_preserved(G),
+        "strength_and_layer_preserved": lambda G: wu_nulls.strength_preserved(G, preserve_layer=True)
     }
 
     nulls = {}

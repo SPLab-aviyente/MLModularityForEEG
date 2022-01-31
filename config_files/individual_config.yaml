@@ -22,7 +22,7 @@ networks_dir: "eeg/error"
 #                         as input. TODO: Give possible input values
 networks: 
     - network: "subject_1"
-      null_networks_type: "weight_and_layer_preserved"
+      null_networks_type: "strength_and_layer_preserved"
 
     # - network: "subject_2"
     #   null_networks_type: "weight_and_layer_preserved"
