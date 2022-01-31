@@ -78,3 +78,4 @@ def get_supra_adj_as_mat(G, layer_order=None):
     return sparse.bmat(A)
 
 from . import read
+from . import write
