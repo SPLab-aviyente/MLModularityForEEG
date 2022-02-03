@@ -10,7 +10,7 @@ import numpy as np
 import pandas as pd
 
 from src import mlgraph
-from src.commdetect import modularity
+from src.commdetect import modularity, consensus_clustering
 from src.nulls import weighted_undirected as wu_nulls
 
 def get_config_file():
@@ -325,10 +325,57 @@ def select_params(inputs, obs_modularities, null_modularities):
     return gamma_opts, omega_opts
 
 def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts):
-    pass
+    output_dir = inputs["output_dir"]
+    networks_dir = inputs["networks_dir"]
 
-def find_group_comms():
-    pass
+    # Get modularity parameters
+    gamma_min = inputs["gamma"][0]["min"]
+    gamma_max = inputs["gamma"][1]["max"]
+    n_gammas = inputs["gamma"][2]["n_points"]
+
+    omega_min = inputs["omega"][0]["min"]
+    omega_max = inputs["omega"][1]["max"]
+    n_omegas = inputs["omega"][2]["n_points"]
+
+    null_model = inputs["null_model"]
+    n_runs = inputs["n_runs"]
+
+    null_names = {net["network"]: net["null_networks_type"] for net in inputs["networks"]}
+
+    def run_modularity(G, gamma, omega):
+        # get edge weights and expected edge weights under the null model
+        w_intra, w_inter = modularity.get_edge_weights(G)
+        p_intra, p_inter = modularity.get_pijs(G, null_model)
+
+        partitions, _ = modularity.find_comms(G, w_intra, w_inter, p_intra, p_inter, gamma, omega,
+                                              n_runs)
+
+        return partitions
+
+    partitions = {}
+    for graph_name, G in graphs.items():
+        gamma = gamma_opts[graph_name]
+        omega = omega_opts[graph_name]
+        
+        alg = lambda T: run_modularity(T, gamma=gamma, omega=omega)
+
+        partitions[graph_name] = consensus_clustering.find_comms(alg(G), alg)
+
+        # Save the community structure
+        nodes_df = G.get_vertex_dataframe()
+        nodes_df["community"] = partitions[graph_name]
+
+        save_dir = os.path.join(output_dir, networks_dir, graph_name, "comm_structs")
+        Path(save_dir).mkdir(parents=True, exist_ok=True)
+
+        save_name = "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+                    "nruns_{:d}/{}_{}.csv".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                                  omega_max, n_omegas, n_runs, null_model,
+                                                  null_names[graph_name])
+        save_file = os.path.join(save_dir, save_name)
+        nodes_df.to_csv(save_file)
+
+    return partitions
 
 if __name__ == "__main__":
     
@@ -353,7 +400,4 @@ if __name__ == "__main__":
     # select the optimal gamma and omega
     gamma_opts, omega_opts = select_params(inputs, obs_modularities, null_modularities)
 
-    find_consensus_comms(inputs, graphs, gamma_opts, omega_opts)
-
-    # if len(graphs) > 1:
-    #     find_group_comms()
+    partitions = find_consensus_comms(inputs, graphs, inputs["gamma"][0]["min"], inputs["omega"][0]["min"])
