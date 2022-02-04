@@ -21,9 +21,15 @@ def _get_pijs_conf(edgelist, node_layers, lw_strength, layer_sizes):
         lj = node_layers[j]
         
         if li == lj:
-            pij_intra[e] = (lw_strength[i, lj]*lw_strength[j, li])/(layer_sizes[li, lj]*2)
+            if layer_sizes[li, lj] == 0:
+                pij_intra[e] = 0
+            else:
+                pij_intra[e] = (lw_strength[i, lj]*lw_strength[j, li])/(layer_sizes[li, lj]*2)
         else: 
-            pij_inter[e] = (lw_strength[i, lj]*lw_strength[j, li])/layer_sizes[li, lj]
+            if layer_sizes[li, lj] == 0:
+                pij_inter[e] = 0
+            else:
+                pij_inter[e] = (lw_strength[i, lj]*lw_strength[j, li])/layer_sizes[li, lj]
 
     return pij_intra, pij_inter
 
