@@ -11,7 +11,7 @@ def _association_matrix(partitions):
     return A
 
 
-def find_comms(partitions, alg, n_calls=1):
+def find_comms(G, partitions, alg, n_calls=1):
     """Apply consensus clustering to a bunch of comunity structures.
 
     Consensus clustering finds a consensus community structure from a set of community structures C.  
@@ -76,6 +76,10 @@ def find_comms(partitions, alg, n_calls=1):
             A_org[i, j] = A_org_c[i, j]
 
     # construct an igraph from association matrix
-    T = ig.Graph.Weighted_Adjacency(A_org)
+    T = ig.Graph.Weighted_Adjacency(A_org, mode="undirected")
 
-    return find_comms(alg(T), alg, n_calls=n_calls+1)
+    T.vs["name"] = G.vs["name"]
+    T.vs["layer"] = G.vs["layer"]
+    T.vs["electrode"] = G.vs["electrode"]
+
+    return find_comms(G, alg(T), alg, n_calls=n_calls+1)

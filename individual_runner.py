@@ -4,6 +4,7 @@ import glob
 from pathlib import Path
 from itertools import product
 from datetime import datetime
+from tabnanny import verbose
 
 import yaml
 import numpy as np
@@ -44,7 +45,11 @@ def read_networks(inputs):
     n_networks = len(network_names)
     graphs = {}
 
-    print("Reading multilayer networks: " + "_"*n_networks + "\r", end="")
+    if inputs["verbose"]:
+        iter = 0
+        n_iters = len(network_names)
+        percentage_done = 100*iter/n_iters
+        print("Reading multilayer networks: {:.2f}% done".format(percentage_done))
 
     for i, network_name in enumerate(network_names):
 
@@ -62,10 +67,13 @@ def read_networks(inputs):
         else:
             print("File '{}' does not exist, skipping this network.".format(network_name))
 
-        print("Reading multilayer networks: " + "X"*(i+1) + "_"*(n_networks-i-1) + "\r", end="")
+        if inputs["verbose"]:
+            iter += 1
+            percentage_done = 100*iter/n_iters
+            print("Reading multilayer networks: {:.2f}% done".format(percentage_done))
 
-    print()
-    print("Multilayer networks are read.")
+    if inputs["verbose"]:
+        print("Multilayer networks are read.")
 
     return graphs
 
@@ -91,10 +99,11 @@ def find_communities(inputs, graphs):
     n_params = len(params)
     n_runs = inputs["n_runs"]
 
-    iter = 0
-    n_iters = len(graphs)*n_params
-    percentage_done = iter/n_iters
-    print("Finding communities of the observed networks: {:.4f}\r".format(percentage_done), end="")
+    if inputs["verbose"]:
+        iter = 0
+        n_iters = len(graphs)*n_params
+        percentage_done = 100*iter/n_iters
+        print("Finding communities of the observed networks: {:.2f}% done".format(percentage_done))
 
     modularities = {}
     for graph_name, G in graphs.items():
@@ -113,26 +122,28 @@ def find_communities(inputs, graphs):
 
             modularities[graph_name][:, p] = q
 
-            iter += 1
-            percentage_done = iter/n_iters
-            print("Finding communities of the observed networks: {:.4f}".format(percentage_done), end="")
+            if inputs["verbose"]:
+                iter += 1
+                percentage_done = 100*iter/n_iters
+                print("Finding communities of the observed networks: {:.2f}% done".format(percentage_done))
 
 
         df_index = pd.MultiIndex.from_product([gammas, omegas], names=["gamma", "omega"])
         modularities_df = pd.DataFrame(modularities[graph_name], columns=df_index)
 
         # save modularity values to csv
-        save_dir = os.path.join(output_dir, networks_dir, graph_name, "modularities")
+        save_dir = os.path.join(output_dir, networks_dir, graph_name, "modularities", 
+                                "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+                                "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                                    omega_max, n_omegas, n_runs))
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 
-        save_name = "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
-                    "nruns_{:d}/{}.csv".format(gamma_min, gamma_max, n_gammas, 
-                                               omega_min, omega_max, n_omegas, n_runs, null_model)
+        save_name = "{}.csv".format(null_model)
         save_file = os.path.join(save_dir, save_name)
         modularities_df.to_csv(save_file)
 
-    print()
-    print("Communities of the observed networks are found.")
+    if inputs["verbose"]:
+        print("Communities of the observed networks are found.")
 
     return modularities
 
@@ -140,7 +151,7 @@ def create_null_networks(inputs, graphs):
     output_dir = inputs["output_dir"]
     networks_dir = inputs["networks_dir"]
 
-    null_names = {net["network"]: net["null_networks_type"] for net in inputs["networks"]}
+    null_name = inputs["null_networks_type"]
 
     null_functions = {
         "weight_preserved": lambda G: wu_nulls.weight_preserved(G), 
@@ -151,15 +162,13 @@ def create_null_networks(inputs, graphs):
 
     n_runs = inputs["n_runs"]
 
-    iter = 0
-    n_iters = len(graphs)*n_runs
-    percentage_done = iter/n_iters
-    print("Creating (or reading) null networks: {:.4f}\r".format(percentage_done), end="")
+    if inputs["verbose"]:
+        iter = 0
+        n_iters = len(graphs)*n_runs
 
     nulls = {}
     for graph_name, G in graphs.items():
         
-        null_name = null_names[graph_name]
         nulls_dir = os.path.join(output_dir, networks_dir, graph_name, null_name)
 
         create_nulls = True
@@ -191,9 +200,10 @@ def create_null_networks(inputs, graphs):
                 file_name = os.path.join(nulls_dir, "network_{:d}".format(r+1))
                 mlgraph.write.to_zipped_gml(Gn, file_name)
 
-                iter += 1
-                percentage_done = iter/n_iters
-                print("Creating (or reading) null networks: {:.4f}\r".format(percentage_done), end="")
+                if inputs["verbose"]:
+                    iter += 1
+                    percentage_done = 100*iter/n_iters
+                    print("Creating null networks: {:.2f}% done".format(percentage_done))
 
         else:
             # Read existing null networks
@@ -201,15 +211,16 @@ def create_null_networks(inputs, graphs):
                 if file.endswith(".gml"):
                     nulls[graph_name].append(mlgraph.read.from_gml(file))
                 elif file.endswith(".gml.gz"):
-                    nulls[graph_name].append(mlgraph.read.from_gml(file))
+                    nulls[graph_name].append(mlgraph.read.from_zipped_gml(file))
 
-                if len(nulls) <= n_runs:
-                    iter += 1
-                percentage_done = iter/n_iters
-                print("Creating (or reading) null networks: {:.4f}\r".format(percentage_done), end="")
+                if inputs["verbose"]:
+                    if len(nulls) <= n_runs:
+                        iter += 1
+                    percentage_done = 100*iter/n_iters
+                    print("Reading null networks: {:.2f}% done".format(percentage_done))
 
-    print()
-    print("Null networks are created (or read).")
+    if inputs["verbose"]:
+        print("Null networks are created (or read).")
 
     return nulls
 
@@ -233,16 +244,15 @@ def find_null_communities(inputs, nulls):
     null_model = inputs["null_model"]
     n_params = len(params)
 
-    null_names = {net["network"]: net["null_networks_type"] for net in inputs["networks"]}
+    null_name = inputs["null_networks_type"]
 
-    iter = 0
-    
-    n_iters = len(nulls)*n_params
-    for _, null_nets in nulls.items():
-        n_iters *= len(null_nets)
-
-    percentage_done = iter/n_iters
-    print("Finding communities of the null networks: {:.4f}\r".format(percentage_done), end="")
+    if inputs["verbose"]:
+        iter = 0
+        n_iters = len(nulls)
+        for _, null_nets in nulls.items():
+            n_iters *= len(null_nets)
+        percentage_done = 100*iter/n_iters
+        print("Finding communities of the null networks: {:.2f}% done".format(percentage_done))
 
     modularities = {}
     for graph_name, null_nets in nulls.items():
@@ -264,26 +274,27 @@ def find_null_communities(inputs, nulls):
 
                 modularities[graph_name][r, p] = q
 
+            if inputs["verbose"]:
                 iter += 1
-                percentage_done = iter/n_iters
-                print("Finding communities of the null networks: {:.4f}\r".format(percentage_done), end="")
+                percentage_done = 100*iter/n_iters
+                print("Finding communities of the null networks: {:.2f}% done".format(percentage_done))
 
         df_index = pd.MultiIndex.from_product([gammas, omegas], names=["gamma", "omega"])
         modularities_df = pd.DataFrame(modularities[graph_name], columns=df_index)
 
         # save modularity values to csv
-        save_dir = os.path.join(output_dir, networks_dir, graph_name, "modularities")
+        save_dir = os.path.join(output_dir, networks_dir, graph_name, "modularities", 
+                                "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+                                "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                                    omega_max, n_omegas, n_runs))
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 
-        save_name = "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
-                    "nruns_{:d}/{}_{}.csv".format(gamma_min, gamma_max, n_gammas, omega_min, 
-                                                  omega_max, n_omegas, n_runs, null_model,
-                                                  null_names[graph_name])
+        save_name = "{}_{}.csv".format(null_model, null_name)
         save_file = os.path.join(save_dir, save_name)
         modularities_df.to_csv(save_file)
 
-    print()
-    print("Communities of the null networks are found.")
+    if inputs["verbose"]:
+        print("Communities of the null networks are found.")
 
     return modularities
 
@@ -304,6 +315,7 @@ def select_params(inputs, obs_modularities, null_modularities):
 
     gamma_opts = {}
     omega_opts = {}
+    mod_opts = {}
 
     for graph_name in obs_modularities:
         # optimal gamma and omega are values where modularity of observed communities if maximally
@@ -316,15 +328,17 @@ def select_params(inputs, obs_modularities, null_modularities):
         omega_opt = params[opt_indx][1]
         mod_diff_opt = mod_diffs[opt_indx]
 
-        print("Best gamma and omega for {} are {:.4f}, {:.4f}; with modularity difference {:.4f}".\
-            format(graph_name, gamma_opt, omega_opt, mod_diff_opt))
+        if inputs["verbose"]:
+            print("Best gamma and omega for {} are {:.4f}, {:.4f}; with modularity difference {:.4f}".\
+                format(graph_name, gamma_opt, omega_opt, mod_diff_opt))
 
         gamma_opts[graph_name] = gamma_opt
         omega_opts[graph_name] = omega_opt
+        mod_opts[graph_name] = mod_diff_opt
 
-    return gamma_opts, omega_opts
+    return gamma_opts, omega_opts, mod_opts
 
-def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts):
+def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts, mod_opts):
     output_dir = inputs["output_dir"]
     networks_dir = inputs["networks_dir"]
 
@@ -340,7 +354,7 @@ def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts):
     null_model = inputs["null_model"]
     n_runs = inputs["n_runs"]
 
-    null_names = {net["network"]: net["null_networks_type"] for net in inputs["networks"]}
+    null_name = inputs["null_networks_type"]
 
     def run_modularity(G, gamma, omega):
         # get edge weights and expected edge weights under the null model
@@ -352,6 +366,12 @@ def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts):
 
         return partitions
 
+    if inputs["verbose"]:
+        iter = 0
+        n_iters = len(graphs)
+        percentage_done = 100*iter/n_iters
+        print("Finding consensus communities: {:.2f}% done".format(percentage_done))
+
     partitions = {}
     for graph_name, G in graphs.items():
         gamma = gamma_opts[graph_name]
@@ -359,23 +379,90 @@ def find_consensus_comms(inputs, graphs, gamma_opts, omega_opts):
         
         alg = lambda T: run_modularity(T, gamma=gamma, omega=omega)
 
-        partitions[graph_name] = consensus_clustering.find_comms(alg(G), alg)
+        partitions[graph_name] = consensus_clustering.find_comms(G, alg(G), alg)
 
         # Save the community structure
         nodes_df = G.get_vertex_dataframe()
         nodes_df["community"] = partitions[graph_name]
 
-        save_dir = os.path.join(output_dir, networks_dir, graph_name, "comm_structs")
+        save_dir = os.path.join(output_dir, networks_dir, graph_name, "comm_structs", 
+                                "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+                                "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                                    omega_max, n_omegas, n_runs))
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 
-        save_name = "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
-                    "nruns_{:d}/{}_{}.csv".format(gamma_min, gamma_max, n_gammas, omega_min, 
-                                                  omega_max, n_omegas, n_runs, null_model,
-                                                  null_names[graph_name])
+        save_name = "mod_diff_{:.3f}_{}_{}.csv".format(mod_opts[graph_name], null_model, null_name)
         save_file = os.path.join(save_dir, save_name)
         nodes_df.to_csv(save_file)
 
+        if inputs["verbose"]:
+            iter += 1
+            percentage_done = 100*iter/n_iters
+            print("Finding consensus communities: {:.2f}% done".format(percentage_done))
+
+    if inputs["verbose"]:
+        print("Consensus communities are found.")
+
     return partitions
+
+def find_group_comms(inputs, partitions, graphs):
+
+    output_dir = inputs["output_dir"]
+    networks_dir = inputs["networks_dir"]
+
+    # Get modularity parameters
+    gamma_min = inputs["gamma"][0]["min"]
+    gamma_max = inputs["gamma"][1]["max"]
+    n_gammas = inputs["gamma"][2]["n_points"]
+
+    omega_min = inputs["omega"][0]["min"]
+    omega_max = inputs["omega"][1]["max"]
+    n_omegas = inputs["omega"][2]["n_points"]
+
+    null_model = inputs["null_model"]
+    n_runs = inputs["n_runs"]
+
+    null_name = inputs["null_networks_type"]
+
+    def run_modularity(G, gamma, omega):
+        # get edge weights and expected edge weights under the null model
+        w_intra, w_inter = modularity.get_edge_weights(G)
+        p_intra, p_inter = modularity.get_pijs(G, null_model)
+
+        partitions, _ = modularity.find_comms(G, w_intra, w_inter, p_intra, p_inter, gamma, omega,
+                                              n_runs)
+
+        return partitions
+
+    if inputs["verbose"]:
+        print("Finding group communities...")
+
+    partitions = np.array([c for _, c in partitions.items()], dtype=int)
+
+    # TODO: Should we optimize this?
+    gamma = 1
+    omega = 1
+        
+    alg = lambda T: run_modularity(T, gamma=gamma, omega=omega)
+
+    partition = consensus_clustering.find_comms(graphs[0], partitions, alg)
+
+    # Save the community structure
+    nodes_df = graphs[0].get_vertex_dataframe()
+    nodes_df["community"] = partition
+
+    save_dir = os.path.join(output_dir, networks_dir, "group_comm_structs", 
+                                "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+                                "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                                    omega_max, n_omegas, n_runs))
+    Path(save_dir).mkdir(parents=True, exist_ok=True)
+
+    save_name = "{}_{}.csv".format(null_model, null_name)
+    save_file = os.path.join(save_dir, save_name)
+    nodes_df.to_csv(save_file)
+
+    if inputs["verbose"]:
+        print("Group communities are found.")
 
 if __name__ == "__main__":
     
@@ -398,6 +485,9 @@ if __name__ == "__main__":
     null_modularities = find_null_communities(inputs, nulls)
 
     # select the optimal gamma and omega
-    gamma_opts, omega_opts = select_params(inputs, obs_modularities, null_modularities)
+    gamma_opts, omega_opts, mod_opts = select_params(inputs, obs_modularities, null_modularities)
 
-    partitions = find_consensus_comms(inputs, graphs, inputs["gamma"][0]["min"], inputs["omega"][0]["min"])
+    partitions = find_consensus_comms(inputs, graphs, gamma_opts, omega_opts, mod_opts)
+
+    if len(graphs) > 1:
+        find_group_comms(inputs, partitions, graphs)

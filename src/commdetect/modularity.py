@@ -1,4 +1,5 @@
 import numpy as np
+import igraph as ig
 import leidenalg
 
 from numba import njit
@@ -58,7 +59,7 @@ def get_pijs(G, null_model="configuration"):
     # layer name to layer index
     layers_indx = {layer: i for i, layer in enumerate(layers)}
 
-    edgelist = np.array(G.get_edgelist())
+    edgelist = np.array(np.triu_indices(G.vcount(), k=1)).T
     node_layers = np.array([layers_indx[v["layer"]] for v in G.vs])
 
     layer_sizes = np.array(
@@ -102,8 +103,9 @@ def get_edge_weights(G):
     # layer name to layer index
     layers_indx = {layer: i for i, layer in enumerate(layers)}
 
-    edgelist = np.array(G.get_edgelist())
-    edgeweights = np.array(G.es["weight"])
+    edgelist = np.array(np.triu_indices(G.vcount(), k=1)).T
+    edgeweights = np.array(G.get_adjacency_sparse(attribute="weight").todense())
+    edgeweights = edgeweights[np.triu_indices(G.vcount(), k=1)]
     node_layers = np.array([layers_indx[v["layer"]] for v in G.vs])
     w_intra, w_inter = _get_edge_weights(edgelist, edgeweights, node_layers)
 
@@ -164,22 +166,25 @@ def get_supra_mod_as_mat(G, null_model="configuration", resolution=1, interlayer
 
     return np.block(A)
 
-def find_comms(G, w_intra, p_intra, w_inter, p_inter, resolution=1, interlayer_scale = 1, n_runs = 1):
+def find_comms(G, w_intra, w_inter, p_intra, p_inter, resolution=1, interlayer_scale = 1, n_runs = 1):
     # TODO: Docstring
+    
     # modularity matrix as a vector
-    b = (w_intra - resolution*p_intra) - interlayer_scale*(w_inter - resolution*p_inter)
-    edgelist = np.array(G.get_edgelist())
+    b = (w_intra - resolution*p_intra) + interlayer_scale*(w_inter - resolution*p_inter)
+    edgelist = np.array(np.triu_indices(G.vcount(), k=1)).T
     B = _get_B(G.vcount(), edgelist, b) # modularity matrix
 
     n = G.vcount()
     rng = np.random.default_rng()
 
+    G_comm = ig.Graph.Full(n)
+
     partitions = np.zeros((n, n_runs), dtype=int)
     modularities = np.zeros(n_runs)
     for r in range(n_runs):
-        c = leidenalg.find_partition(G, leidenalg.CPMVertexPartition, n_iterations=-1, 
+        c = leidenalg.find_partition(G_comm, leidenalg.CPMVertexPartition, n_iterations=-1, 
                                      weights=b, resolution_parameter=0, 
-                                     seed=int(rng.random()*1e9 + r))
+                                     seed=int(rng.random()*1e4 + r))
         partitions[:, r] = np.array(c.membership, dtype=int)
         modularities[r] = np.sum(B*(partitions[:, r][..., None] == partitions[:, r]).astype(float))
 
