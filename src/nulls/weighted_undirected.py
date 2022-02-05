@@ -145,9 +145,9 @@ def strength_preserved(G, n_swaps=5, preserve_layer=False):
             u = random.uniform(-min(weights[0], weights[1]), min(weights[2], weights[3]))
 
             Gc.es[edge_ids[0]]["weight"] = weights[0] + u
-            Gc.es[edge_ids[2]]["weight"] = weights[1] - u
+            Gc.es[edge_ids[2]]["weight"] = weights[2] - u
 
-            Gc.es[edge_ids[1]]["weight"] = weights[2] + u
+            Gc.es[edge_ids[1]]["weight"] = weights[1] + u
             Gc.es[edge_ids[3]]["weight"] = weights[3] - u
 
             break
