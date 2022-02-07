@@ -51,9 +51,9 @@ def _get_pijs_er(edgelist, node_layers, layer_sizes):
         lj = node_layers[j]
         
         if li == lj:
-            pij_intra[e] = layer_sizes[li, lj]/layer_order[li]*(layer_order[lj] - 1)/2
+            pij_intra[e] = layer_sizes[li, lj]/(layer_order[li]*(layer_order[lj] - 1)/2)
         else:
-            pij_inter[e] /= layer_sizes[li, lj]/layer_order[li]*layer_order[lj]
+            pij_inter[e] = layer_sizes[li, lj]/(layer_order[li]*layer_order[lj])
 
     return pij_intra, pij_inter
     
