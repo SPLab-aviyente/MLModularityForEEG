@@ -264,7 +264,25 @@ def find_null_communities(inputs, nulls):
 
     modularities = {}
     for graph_name, null_nets in nulls.items():
+        save_dir = os.path.join(
+            output_dir, networks_dir, graph_name, "modularities", 
+            "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
+            "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
+                                omega_max, n_omegas, n_runs))
+        save_name = "{}_{}.csv".format(null_model, null_name)
+        save_file = os.path.join(save_dir, save_name)
+
         n_runs = len(null_nets)
+
+        # Check if modularities are already calculated for given input settings
+        if os.path.exists(save_file):
+            mods = pd.read_csv(save_file, index_col=1, header=[0, 1])
+            modularities[graph_name] = mods.to_numpy()
+
+            # make sure that existing modularities have the same number of runs
+            # as the number of input networks
+            if modularities.shape[0] == n_runs: 
+                continue
 
         modularities[graph_name] = np.zeros((n_runs, n_params))
 
@@ -291,14 +309,9 @@ def find_null_communities(inputs, nulls):
         modularities_df = pd.DataFrame(modularities[graph_name], columns=df_index)
 
         # save modularity values to csv
-        save_dir = os.path.join(output_dir, networks_dir, graph_name, "modularities", 
-                                "gmin_{:.3f}_gmax_{:.3f}_ng_{:d}_omin_{:.3f}_omax_{:.3f}_no_{:d}_"\
-                                "nruns_{:d}".format(gamma_min, gamma_max, n_gammas, omega_min, 
-                                                    omega_max, n_omegas, n_runs))
+        
         Path(save_dir).mkdir(parents=True, exist_ok=True)
 
-        save_name = "{}_{}.csv".format(null_model, null_name)
-        save_file = os.path.join(save_dir, save_name)
         modularities_df.to_csv(save_file)
 
     if inputs["verbose"]:

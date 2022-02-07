@@ -61,11 +61,11 @@ networks:
 # to create new null networks, put those nulls in a folder under 
 # '{output_dir}/{networks_dir}/{network}' and give the name of the folder 
 # as input. TODO: Give possible input values
-null_networks_type: "weight_and_layer_preserved"
+null_networks_type: "strength_and_layer_preserved"
 
 # Type of the null model to use in modularity definition
 # It can be either "configuration" or "erdos-renyi"
-null_model: "configuration"
+null_model: "erdosrenyi"
 
 # Resolution parameter
 # TODO: Describe min, max, num_points

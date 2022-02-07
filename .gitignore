@@ -1,5 +1,10 @@
 data/
 .vscode/
+config_files/correct/
+config_files/error/
+sbatch/
+job_*
+notebooks/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

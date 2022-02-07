@@ -1,4 +1,5 @@
 import random
+import numpy as np
 
 from .. import mlgraph
 
@@ -109,6 +110,9 @@ def strength_preserved(G, n_swaps=5, preserve_layer=False):
 
     max_attempt = int(n_nodes*n_edges/(n_nodes*(n_nodes-1)))
 
+    max_weight = max(G.es["weight"])
+    min_weight = min(G.es["weight"])
+
     for _ in range(n_swaps):
         attempt = 0
         while attempt <= max_attempt:
@@ -142,7 +146,13 @@ def strength_preserved(G, n_swaps=5, preserve_layer=False):
 
             weights = [e["weight"] for e in Gc.es(edge_ids)]
 
-            u = random.uniform(-min(weights[0], weights[1]), min(weights[2], weights[3]))
+            # u_lb = max(min_weight - weights[0], min_weight - weights[1], 
+            #            weights[2] - max_weight, weights[3] - max_weight)
+            # u_ub = min(max_weight - weights[0], max_weight - weights[1], 
+            #            weights[2] - min_weight, weights[3] - min_weight)
+            u_lb = -min(weights[0], weights[1])
+            u_ub = min(weights[2], weights[3])
+            u = random.uniform(u_lb, u_ub)
 
             Gc.es[edge_ids[0]]["weight"] = weights[0] + u
             Gc.es[edge_ids[2]]["weight"] = weights[2] - u
