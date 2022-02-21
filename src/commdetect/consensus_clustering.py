@@ -11,7 +11,7 @@ def _association_matrix(partitions):
     return A
 
 
-def find_comms(G, partitions, alg, n_calls=1):
+def find_comms(G, partitions, alg, n_calls=1, th=False):
     """Apply consensus clustering to a bunch of comunity structures.
 
     Consensus clustering finds a consensus community structure from a set of community structures C.  
@@ -56,30 +56,30 @@ def find_comms(G, partitions, alg, n_calls=1):
     if len(np.unique(A_org)) == 2 or n_calls>10:
         return partitions[:, 0]
 
-    # Randomize partitions and get a randomized association matrix
-    for p in range(n_partitions):
-        np.random.shuffle(partitions[:, p])
+    if th:
+        # # Randomize partitions and get a randomized association matrix
+        for p in range(n_partitions):
+            np.random.shuffle(partitions[:, p])
 
-    A_rnd = _association_matrix(partitions)
+        A_rnd = _association_matrix(partitions)
 
-    # Expected number of times a pair of nodes is assigned to the same community in random partition
-    threshold = np.max(A_rnd[np.triu_indices(n_nodes, k=1)])
+        # Expected number of times a pair of nodes is assigned to the same community in random partition
+        threshold = np.max(A_rnd[np.triu_indices(n_nodes, k=1)])
 
-    A_org_c = A_org.copy()
-    A_org[A_org<threshold] = 0
-    A_org[np.diag_indices(n_nodes)] = 0
+        A_org_c = A_org.copy()
+        A_org[A_org<threshold] = 0
+        A_org[np.diag_indices(n_nodes)] = 0
 
-    # After thresholding some nodes may be disconnected, connect them to neighbors with high weights  
-    degrees = np.count_nonzero(A_org, axis=1)
-    for i in np.where(degrees==0)[0]:
-        for j in np.where(A_org_c[i, :] >= np.max(A_org_c[i, :])-1e-6)[0]:
-            A_org[i, j] = A_org_c[i, j]
+        # After thresholding some nodes may be disconnected, connect them to neighbors with high weights  
+        degrees = np.count_nonzero(A_org, axis=1)
+        for i in np.where(degrees==0)[0]:
+            for j in np.where(A_org_c[i, :] >= np.max(A_org_c[i, :])-1e-6)[0]:
+                A_org[i, j] = A_org_c[i, j]
 
     # construct an igraph from association matrix
-    T = ig.Graph.Weighted_Adjacency(A_org, mode="undirected")
+    T = ig.Graph.Weighted_Adjacency(A_org, mode="undirected", loops=False)
 
-    T.vs["name"] = G.vs["name"]
-    T.vs["layer"] = G.vs["layer"]
-    T.vs["electrode"] = G.vs["electrode"]
+    for attr in G.vertex_attributes():
+        T.vs[attr] = G.vs[attr]
 
     return find_comms(G, alg(T), alg, n_calls=n_calls+1)

@@ -11,30 +11,47 @@ from .. import mlgraph
 # TODO: A better way to implement this by extending leidenalg?
 
 @njit
-def _get_pijs_conf(edgelist, node_layers, lw_strength, layer_sizes):
+def _get_pijs_conf(edgelist, node_layers, lw_strength, layer_sizes, preserve_layer):
     pij_intra = np.zeros(edgelist.shape[0])
     pij_inter = np.zeros(edgelist.shape[0])
+
+    if not preserve_layer:
+        strengths = np.sum(lw_strength, axis=1)
+        graph_size = np.sum(np.triu(layer_sizes))
+
     for e, edge in enumerate(edgelist):
         i = edge[0]
         j = edge[1]
         li = node_layers[i]
         lj = node_layers[j]
         
-        if li == lj:
-            if layer_sizes[li, lj] == 0:
-                pij_intra[e] = 0
-            else:
-                pij_intra[e] = (lw_strength[i, lj]*lw_strength[j, li])/(layer_sizes[li, lj]*2)
-        else: 
-            if layer_sizes[li, lj] == 0:
-                pij_inter[e] = 0
-            else:
-                pij_inter[e] = (lw_strength[i, lj]*lw_strength[j, li])/layer_sizes[li, lj]
+        if preserve_layer:
+            if li == lj:
+                if layer_sizes[li, lj] == 0:
+                    pij_intra[e] = 0
+                else:
+                    pij_intra[e] = (lw_strength[i, lj]*lw_strength[j, li])/(layer_sizes[li, lj]*2)
+            else: 
+                if layer_sizes[li, lj] == 0:
+                    pij_inter[e] = 0
+                else:
+                    pij_inter[e] = (lw_strength[i, lj]*lw_strength[j, li])/layer_sizes[li, lj]
+        else:
+            if li == lj:
+                if graph_size == 0:
+                    pij_intra[e] = 0
+                else:
+                    pij_intra[e] = 0.5*strengths[i]*strengths[j]/graph_size
+            else: 
+                if graph_size == 0:
+                    pij_inter[e] = 0
+                else:
+                    pij_inter[e] = 0.5*strengths[i]*strengths[j]/graph_size
 
     return pij_intra, pij_inter
 
 @njit
-def _get_pijs_er(edgelist, node_layers, layer_sizes):
+def _get_pijs_er(edgelist, node_layers, layer_sizes, preserve_layer):
     pij_intra = np.zeros(edgelist.shape[0])
     pij_inter = np.zeros(edgelist.shape[0])
 
@@ -44,20 +61,31 @@ def _get_pijs_er(edgelist, node_layers, layer_sizes):
     for i, layer_indx in enumerate(layer_indices):
         layer_order[i] = np.sum(node_layers == layer_indx)
 
+    if not preserve_layer:
+        graph_size = np.sum(layer_sizes[np.triu_indices_from(layer_sizes)])
+        graph_order = np.sum(layer_order)
+
     for e, edge in enumerate(edgelist):
         i = edge[0]
         j = edge[1]
         li = node_layers[i]
         lj = node_layers[j]
         
-        if li == lj:
-            pij_intra[e] = layer_sizes[li, lj]/(layer_order[li]*(layer_order[lj] - 1)/2)
+        if preserve_layer:
+            if li == lj:
+                pij_intra[e] = layer_sizes[li, lj]/(layer_order[li]*(layer_order[lj] - 1)/2)
+            else:
+                pij_inter[e] = layer_sizes[li, lj]/(layer_order[li]*layer_order[lj])
         else:
-            pij_inter[e] = layer_sizes[li, lj]/(layer_order[li]*layer_order[lj])
+            if li == lj:
+                pij_intra[e] = graph_size/(graph_order*(graph_order - 1)/2)
+            else:
+                pij_intra[e] = graph_size/(graph_order*(graph_order - 1)/2)
 
     return pij_intra, pij_inter
+
     
-def get_pijs(G, null_model="configuration"):
+def get_pijs(G, null_model="configuration", preserve_layer=True):
     # TODO: Docstring
 
     layers = mlgraph.get_layer_names(G)
@@ -79,10 +107,11 @@ def get_pijs(G, null_model="configuration"):
             [[mlgraph.get_layerwise_strength(G, v, l) for l in layers] for v in G.vs]
             )
         
-        pij_intra, pij_inter = _get_pijs_conf(edgelist, node_layers, lw_strengths, layer_sizes)
+        pij_intra, pij_inter = _get_pijs_conf(edgelist, node_layers, lw_strengths, layer_sizes, 
+                                              preserve_layer)
 
     elif null_model == "erdosrenyi":
-        pij_intra, pij_inter = _get_pijs_er(edgelist, node_layers, layer_sizes)
+        pij_intra, pij_inter = _get_pijs_er(edgelist, node_layers, layer_sizes, preserve_layer)
     
     return pij_intra, pij_inter
 
@@ -172,10 +201,11 @@ def get_supra_mod_as_mat(G, null_model="configuration", resolution=1, interlayer
 
     return np.block(A)
 
-def find_comms(G, w_intra, w_inter, p_intra, p_inter, resolution=1, interlayer_scale = 1, n_runs = 1):
+def find_comms(G, w_intra, w_inter, p_intra, p_inter, resolution = 1, 
+               interlayer_scale = 1, n_runs = 1):
     # TODO: Docstring
     
-    # modularity matrix as a vector
+    # Modularity matrix as a vector
     b = (w_intra - resolution*p_intra) + interlayer_scale*(w_inter - resolution*p_inter)
     edgelist = np.array(np.triu_indices(G.vcount(), k=1)).T
     B = _get_B(G.vcount(), edgelist, b) # modularity matrix
@@ -183,8 +213,8 @@ def find_comms(G, w_intra, w_inter, p_intra, p_inter, resolution=1, interlayer_s
     n = G.vcount()
     rng = np.random.default_rng()
 
+    # Find the communities
     G_comm = ig.Graph.Full(n)
-
     partitions = np.zeros((n, n_runs), dtype=int)
     modularities = np.zeros(n_runs)
     for r in range(n_runs):

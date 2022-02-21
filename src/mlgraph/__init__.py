@@ -1,5 +1,19 @@
 import igraph as ig
+import numpy as np
 from scipy import sparse
+
+
+def get_layer_subgraphs(G, layeri, layerj=None):
+    if layerj is None: 
+        # return a intralayer graph
+        nodes = G.vs(layer_eq=layeri)
+        return G.induced_subgraph(nodes)
+    else: 
+        # return an interlayer graph
+        layeri_nodes = G.vs(layer_eq=layeri)
+        layerj_nodes = G.vs(layer_eq=layerj)
+        edges = G.es(_between=(layeri_nodes, layerj_nodes))
+        return G.subgraph_edges(edges)
 
 def get_layer_names(G):
     # TODO: Docstring
@@ -76,6 +90,30 @@ def get_supra_adj_as_mat(G, layer_order=None):
             A[i][j] = supra_adj[layeri][layerj]
 
     return sparse.bmat(A)
+
+def scale_interlayer(G, w):
+    
+    layers = get_layer_names(G)
+    n_layers = len(layers)
+
+    for i in range(n_layers):
+        # Get nodes in ith layer
+        li = layers[i]
+        li_nodes = G.vs(layer_eq = li)
+
+        for j in range(i+1, n_layers):
+            # Get nodes in ith layer
+            lj = layers[j]
+            lj_nodes = G.vs(layer_eq = lj)
+
+            # Get inter-layer edges between ith and jth layers
+            edges = G.es(_between = (li_nodes, lj_nodes))
+            
+            # Get edge weights
+            weights = np.array(edges["weight"])
+
+            # Scale weights
+            edges["weight"] = w*weights
 
 from . import read
 from . import write
