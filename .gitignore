@@ -1,10 +1,5 @@
-data/
 .vscode/
-config_files/correct/
-config_files/error/
-sbatch/
-job_*
-notebooks/
+hpcc/
 figures/
 .DS_Store
 

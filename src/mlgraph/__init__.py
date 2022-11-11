@@ -7,32 +7,27 @@ from . import io
 from . import input_checks
 
 class MLGraph():
-    """A composite class that can be used to work with multilayer graphs. The 
-    class stores a `igraph` Graph object, while ensuring that nodes have `layer` 
-    attribute. 
-
-
-    Parameters
-    ----------
-    graph : ig.Graph, optional
-        A graph whose nodes have `layer` attribute, by default None. If None, 
-        an empty multilayer graph is initiated. Otherwise, the provided graph 
-        will be used to initiate the multilayer graph.
-
-    Attributes
-    ----------
-    graph : ig.Graph
-        The underlying ig.Graph. This attribute can be used to access ig.Graph
-        methods. 
-    layers : list
-        List of layer names of the multilayer graph. 
+    """A composite class based on igraph for multilayer graph analysis.
     """
 
     def __init__(self, graph: ig.Graph=None) -> None:
-        
+        """Initiate either an empty multilayer graph or a multilayer graph from
+        a given igraph Graph.
+
+        Parameters
+        ----------
+        graph : igraph Graph, optional
+            If provided the multilayer graph will be generated from it. Vertices
+            should have an attribute named "layer", by default None
+
+        Raises
+        ------
+        Exception
+            If provided graph's vertices don't have attribute "layer".
+        """
         if graph is None: # Create an empty graph
             self.graph = ig.Graph()
-            self.layers = []
+            self.layers = set()
         else:
             if not ("layer" in graph.vertex_attributes()):
                 raise Exception("Provided graph must have vertex attribute 'layer'.")
@@ -238,16 +233,16 @@ class MLGraph():
         Parameters
         ----------
         layer : str
-            The layer whose adjacency matrix will be returned.
+            The layer whose adjacency will be returned.
         weight : str, optional
-            Node attribute to use edge weight, by default None. If None, the 
-            binary adjacency matrix is returned.
+            Attribute to use for edge weight, by default None
 
         Returns
         -------
-        A : sp.sparse.csr_matrix
-            Adjacency matrix. 
+        adj_mat : sparse matrix
+            The adjacency matrix.
         """
+
         intra_graph = self.intralayer_graph(layer)
 
         # scipy sparse matrix gives error when graph is empty, 
@@ -259,8 +254,7 @@ class MLGraph():
             return intra_graph.get_adjacency_sparse(attribute=weight)
 
     def interlayer_incidence(self, layer1, layer2, weight=None):
-        """Return incidence matrix of the (bipartite) interlayer graph between 
-        two layers.
+        """Return the incidence matrix between two layers.
 
         Parameters
         ----------
@@ -269,15 +263,13 @@ class MLGraph():
         layer2 : str, optional
             Name of the second layer.
         weight : str, optional
-            Node attribute to use edge weight, by default None. If None, the 
-            binary incidence matrix is returned.
+            Attribute to use for edge weight, by default None
 
         Returns
         -------
-        A : sp.sparse.csr_matrix
-            Incidence matrix. 
+        inc_mat : sparse matrix
+            The incidence matrix.
         """
-
         inter_graph = self.interlayer_graph(layer1, layer2)
 
         # scipy sparse matrix gives error when graph is empty, 
@@ -295,21 +287,20 @@ class MLGraph():
         return inter_graph_adj[layer1_nodes, :][:, layer2_nodes]
 
     def supra_adjacency(self, weight: str=None) -> dict:
-        """Return supra-adjacency matrix of the mutlilayer graph.
+        """Return the supra-adjacency of the multilayer network as dict-of-dict.
 
         Parameters
         ----------
         weight : str, optional
-            Node attribute to use edge weight, by default None. If None, the 
-            binary supra-adjacency matrix is returned.
+            Attribute to use for edge weight, by default None
 
         Returns
         -------
-        A : dict of dict
-            Supra-adjacency matrix as a dict of dict. A[li][lj] is the interlayer
-            connectivity between layers li and lj.
+        supra: dict-of-dict
+            Supra-adjacency matrix as dict-of-dict. supra[i][j] is the incidence
+            matrix between layer i and j if i != j, and the adjacency matrix of
+            layer i if i == j. 
         """
-
         layers = self.layers
         
         supra = {}
@@ -325,14 +316,18 @@ class MLGraph():
         return supra
                      
     def read_from_gml(self, file_name: str) -> None:
-        """Read the multilayer graph from a gml or gzipped gml file.
+        """Read a multilayer graph from a (zipped) gml file. 
 
         Parameters
         ----------
-        file_name : str or Path object.
-            File to read. The filename should include the extension: .gml or .gml.gz
-        """
+        file_name : str
+            The GML file to read. It can also be a zipped gml. 
 
+        Raises
+        ------
+        Exception
+            The vertices should have attribute "layer".
+        """
         self.graph = io.read_gml(file_name)
 
         if "layer" not in self.graph.vertex_attributes():
@@ -344,11 +339,12 @@ class MLGraph():
         self.layers = list(node_layers[np.sort(indx)])
 
     def write_to_gml(self, file_name: str) -> None:
-        """Write the multilayer graph to a gml or gzipped 
+        """Write the multilayer graph to a (zipped) GML file.
 
         Parameters
         ----------
-        file_name : str or Path object 
-            File to write to. The filename should include the extension: .gml or .gml.gz
+        file_name : str
+            Save name. It should include the extension. If it ends with .gz, the file
+            is gzipped.
         """
         io.write_gml(self.graph, file_name)
