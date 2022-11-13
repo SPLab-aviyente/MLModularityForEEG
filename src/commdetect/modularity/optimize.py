@@ -1,20 +1,3 @@
-# MLModularityForEEG - a python package for modularity based community detection
-# in multilayer EEG networks. 
-# Copyright (C) 2021 Abdullah Karaaslanli <evdilak@gmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import leidenalg as la
 import igraph as ig
 import numpy as np
@@ -22,27 +5,33 @@ import numpy as np
 from . import ml_modularity_matrix, bipartite_modularity_matrix, sl_modularity_matrix
 
 def find_sl_communities(A, P, gamma, n_runs=1):
-    """Find communities of a single-layer graph by optimizing modularity with
-    Leiden algorithm. 
+    """Maximize modularity of a single-layer graph using leiden algorithm [1]_.
 
     Parameters
     ----------
-    A : ndarray or sparse matrix
-        Adjacency matrix of the graph.
-    P : ndarray 
-        Null matrix of the graph.
+    A : sparse or dense ndarray
+        The adjacency matrix.
+    P : dense ndarray
+        The null matrix
     gamma : float
         Resolution parameter.
     n_runs : int, optional
-        Number of times to run community detection algorithm, by default 1
+        Number of times to run leiden algorithm, by default 1
 
     Returns
     -------
-    C : ndarray
-        nxn_runs dimensional matrix of detected community structures. C[i, j] 
-        is the community node i belongs to in the jth run.
-    """
+    C : numpy ndarray
+        Indicator matrix of the found community structures. Its dimensions are 
+        nxr where n is the number of nodes and r is `n_runs`. C[:, i] is the 
+        community structure detected at ith run.
+    
+    References
+    ----------
+    .. [1] Traag, Vincent A., Ludo Waltman, and Nees Jan Van Eck. "From Louvain
+       to Leiden: guaranteeing well-connected communities." Scientific reports 9.1 
+       (2019): 1-12.
 
+    """
     B = sl_modularity_matrix(A, P, gamma)
 
     rng = np.random.default_rng()
@@ -61,29 +50,32 @@ def find_sl_communities(A, P, gamma, n_runs=1):
     return comms
 
 def find_bipartite_communities(A, P, gamma, n_runs=1):
-    """Find communities of a bipartite graph by optimizing modularity with
-    Leiden algorithm.
+    """Maximize modularity of a bipartite graph using leiden algorithm [1]_.
 
     Parameters
     ----------
-    A : ndarray or sparse matrix
-        n1xn2 dimensional incidence matrix of the bipartite graph, where n1 and n2
-        are number of nodes in the first and second types of the bipartite graph,
-        respectively.
-    P : ndarray
-        n1xn2 dimensional null matrix of the bipartite graph.
+    A : sparse or dense ndarray
+        The incidence matrix of bipartite graph.
+    P : dense ndarray
+        The null matrix of bipartite graph generated from its incidence matrix 
+        (see `bipartite_null_matrix`)
     gamma : float
         Resolution parameter.
     n_runs : int, optional
-        Number of times to run community detection algorithm, by default 1
+        Number of times to run leiden algorithm, by default 1
 
     Returns
     -------
-    C : ndarray
-        nxn_runs dimensional matrix of detected community structures. C[i, j] 
-        is the community node i belongs to in the jth run. n is equal to n1+n2, 
-        and first n1 rows C correspond to nodes in first type and remaining ones
-        correcpond to second type.
+    C : numpy ndarray
+        Indicator matrix of the found community structures. Its dimensions are 
+        nxr where n is the number of nodes and r is `n_runs`. C[:, i] is the 
+        community structure detected at ith run.
+
+    References
+    ----------
+    .. [1] Traag, Vincent A., Ludo Waltman, and Nees Jan Van Eck. "From Louvain
+       to Leiden: guaranteeing well-connected communities." Scientific reports 9.1 
+       (2019): 1-12.
     """
 
     B = bipartite_modularity_matrix(A, P, gamma)
@@ -102,34 +94,38 @@ def find_bipartite_communities(A, P, gamma, n_runs=1):
 
     return comms
 
-def find_ml_communities(A, P, g, o, n_runs=1):
-    """Find communities of a multilayer graph by optimizing modularity with
-    Leiden algorithm. 
+def find_ml_communities(A, P, g1, g2, n_runs=1):
+    """Maximize modularity matrix of multilayer graph using leiden algorithm [1]_.
 
     Parameters
     ----------
     A : dict of dict
-        Supra-adjacency matrix of multilayer network as a dict of dict.
+        Supra-adjacency of the multilayer graph.
     P : dict of dict
-        Supra-null matrix of multilayer network as a dict of dict.
-    g : float
+        Supra-null matrix of the multilayer graph.
+    g1 : float
         Resolution parameter.
-    o : float
-        Interlayer scale.
+    g2 : float
+        Interlayer scale of the multilayer modularity.
     n_runs : int, optional
-        Number of times to run community detection algorithm, by default 1
+        Number of times to run leiden algorithm, by default 1
 
     Returns
     -------
-    C : ndarray
-        nxn_runs dimensional matrix of detected community structures. C[i, j] 
-        is the community node i belongs to in the jth run. Node ordering of C
-        is the same as ordering in supra-adjacency.
+    C : numpy ndarray
+        Indicator matrix of the found community structures. Its dimensions are 
+        nxr where n is the number of nodes and r is `n_runs`. C[:, i] is the 
+        community structure detected at ith run.
+
+    References
+    ----------
+    .. [1] Traag, Vincent A., Ludo Waltman, and Nees Jan Van Eck. "From Louvain
+       to Leiden: guaranteeing well-connected communities." Scientific reports 9.1 
+       (2019): 1-12.
     """
 
-
     # Get the modularity matrix
-    B = ml_modularity_matrix(A, P, g, o, as_np=True)
+    B = ml_modularity_matrix(A, P, g1, g2, as_np=True)
 
     rng = np.random.default_rng()
 

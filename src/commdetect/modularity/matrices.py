@@ -1,20 +1,3 @@
-# MLModularityForEEG - a python package for modularity based community detection
-# in multilayer EEG networks. 
-# Copyright (C) 2021 Abdullah Karaaslanli <evdilak@gmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import numpy as np
 
 from scipy import sparse
@@ -24,20 +7,25 @@ from scipy import sparse
 ################################################################################
 
 def sl_null_matrix(A, null_model="configuration"):
-    """Construct a null matrix to be used in modularity for single-layer graphs.
+    """Generate null matrix of single layer modularity from its adjacency matrix.
 
     Parameters
     ----------
-    A : ndarray, or sparse matrix
-        Adjacency matrix of the single-layer graph.
+    A : sparse or dense ndarray
+        The adjacency matrix of the single layer graph
     null_model : str, optional
-        Null model to use for constructing null matrix. It can be "configuration"
-        or "erdosrenyi". By default "configuration"
+        Null model to use to generate null matrix. Could be "configuration" or 
+        "erdosrenyi". By default "configuration"
 
     Returns
     -------
-    P : ndarray
-        Constructed null matrix.
+    P : nparray
+        Null matrix.
+
+    Raises
+    ------
+    Exception
+        Parameter 'null_model' must be either 'configuration' or 'erdosrenyi'.
     """
 
     if null_model == "configuration":
@@ -56,26 +44,38 @@ def sl_null_matrix(A, null_model="configuration"):
 
         null_matrix = p*np.ones(A.shape)
         null_matrix[np.diag_indices_from(null_matrix)] = 0
+    else:
+        raise Exception("Parameter 'null_model' must be either 'configuration'",
+                        " or 'erdosrenyi'.")
     
     return null_matrix
 
 def bipartite_null_matrix(B, null_model="configuration"):
-    """Construct a null matrix to be used in modularity for bipartite graphs.
+    """Generate null matrix of bipartite modularity from incidence matrix of the
+    bipartite matrix. See [1] for the definition of bipartite modularity.
 
     Parameters
     ----------
-    B : ndarray or sparse matrix
-        n1xn2 dimensional incidence matrix of the bipartite graph, where n1 and n2
-        are number of nodes in the first and second types of the bipartite graph,
-        respectively.
+    B : sparse or dense ndarray
+        Incidence matrix of the bipartite graph.
     null_model : str, optional
-        Null model to use for constructing null matrix. It can be "configuration"
-        or "erdosrenyi". By default "configuration"
+        Null model to use to generate null matrix. Could be "configuration" or 
+        "erdosrenyi". By default "configuration"
 
     Returns
     -------
-    P : ndarray
-        Constructed null matrix.
+    P : nparray
+        Null matrix.
+
+    Raises
+    ------
+    Exception
+        Parameter 'null_model' must be either 'configuration' or 'erdosrenyi'.
+
+    References
+    ---------
+    .. [1] Barber, Michael J. "Modularity and community detection in bipartite 
+           networks." Physical Review E 76.6 (2007): 066102. 
     """
 
     if null_model == "configuration":
@@ -92,31 +92,36 @@ def bipartite_null_matrix(B, null_model="configuration"):
         p = m/(n_nodes1*n_nodes2)
         
         return p*np.ones(B.shape)
+    else:
+        raise Exception("Parameter 'null_model' must be either 'configuration'",
+                        " or 'erdosrenyi'.")
 
 def ml_null_matrix(A, layers, null_model="configuration", preserve_layer=True):
-    """Construct a null matrix to be used in modularity for multilauyer graphs.
+    """Generate supra=null matrix of multilayer modularity from supra-adjacency 
+    matrix of a multilayer graph.
 
     Parameters
     ----------
     A : dict of dict
-        Supra-adjacency matrix of multilayer network as a dict of dict.
+        Supra-adjacency matrix of multilayer graph where A[i][j] is the adjacency
+        matrix of ith layer if i==j, and incidence matrix between layers i and j
+        if i!=j.
     layers : list
-        Layer names of the multilayer graph.
+        Name of the layers of the multilayer graph.
     null_model : str, optional
-        Null model to use for constructing null matrix. It can be "configuration"
-        or "erdosrenyi". By default "configuration"
+        Null model to use to generate null matrix. Could be "configuration" or 
+        "erdosrenyi". By default "configuration"
     preserve_layer : bool, optional
-        Whether to preserve layers when constructing the null matrix. If true,
-        a null matrix is constructed for each intra- and inter-layer graph 
-        separately and their concatenation is considered as the null matrix of 
-        the multilayer graph. If false, multilayer graph considered as a 
-        single-layer graph and null matrix is constructed accordingly. By default 
-        True.
+        Whether to preserve the layers when generating supra-null matrix. If True, 
+        the supra-null matrix is constructed from null matrix of intra- and inter-layer 
+        graphs using single layer (see `sl_null_matrix`) and bipartite modularity
+        (see `bipartite_null_matrix`). If false, multilayer graph is considered
+        as a single layer graph. By default True
 
     Returns
     -------
     P : dict of dict
-        Supra-null matrix of multilayer network as a dict of dict.
+        Supra-null matrix where P[i][j] is the null matrix between layers i and j. 
     """
 
     if preserve_layer:
@@ -146,43 +151,43 @@ def ml_null_matrix(A, layers, null_model="configuration", preserve_layer=True):
 ################################################################################
 
 def sl_modularity_matrix(A, P, gamma):
-    """Construct modularity matrix of a single-layer graph.
+    """Generate modularity matrix of single layer graph from its adjacency and 
+    null matrix.
 
     Parameters
     ----------
-    A : ndarray, or sparse matrix
-        Adjacency matrix of the single-layer graph.
-    P : ndarray
-        Null matrix of the single-layer graph.
+    A : sparse or dense ndarray
+        The adjacency matrix.
+    P : dense ndarray
+        The null matrix
     gamma : float
-        Resolution parameter.
+        Resolution parameter
 
     Returns
     -------
-    B : ndarray
-        Modularity matrix.
+    B : dense ndarray
+        The modularity matrix. 
     """
 
     return A - gamma*P
 
 def bipartite_modularity_matrix(A, P, gamma):
-    """Construct modularity matrix of a bipartite graph.
+    """Generate bipartite modularity matrix from its incidence and null matrices.
 
     Parameters
     ----------
-    A : ndarray or sparse matrix
-        n1xn2 dimensional incidence matrix of the bipartite graph, where n1 and n2
-        are number of nodes in the first and second types of the bipartite graph,
-        respectively.
-    P : ndarray
-        n1xn2 dimensional null matrix of the bipartite graph.
+    A : sparse or dense ndarray
+        The incidence matrix of bipartite graph.
+    P : dense ndarray
+        The null matrix of bipartite graph generated from its incidence matrix 
+        (see `bipartite_null_matrix`)
     gamma : float
         Resolution parameter.
 
     Returns
     -------
-    B : ndarray
-        nxn dimension modularity matrix, where n=n1+n2.
+    B : dense ndarray
+        Modularity matrix of the bipartite graph.
     """
 
     n1, n2 = A.shape # number of nodes in each node type
@@ -194,27 +199,28 @@ def bipartite_modularity_matrix(A, P, gamma):
 
     return B
 
-def ml_modularity_matrix(A, P, g, o, as_np=False):
-    """Construct modularity matrix of a multilayer graph.
+def ml_modularity_matrix(A, P, g1, g2, as_np=False):
+    """Generate modularity matrix of a multilayer graph from its supra-adjacency
+    and supra-null matrix. 
 
     Parameters
     ----------
     A : dict of dict
-        Supra-adjacency matrix of multilayer network as a dict of dict.
+        Supra-adjacency of the multilayer graph.
     P : dict of dict
-        Supra-null matrix of multilayer network as a dict of dict.
-    g : float
+        Supra-null matrix of the multilayer graph.
+    g1 : float
         Resolution parameter.
-    o : float
-        Interlayer scale.
+    g2 : float
+        Interlayer scale of the multilayer modularity.
     as_np : bool, optional
-        Whether to return the modularity matrix as a numpy matrix or a dict of 
-        dict, by default False.
+        If true, returns modularity matrix as numpy ndarray instead of dict of
+        dict. By default False
 
     Returns
     -------
-    B : ndarray, or dict of dict
-        Modularity matrix.
+    B : dict of dict or numpy ndarray
+        The modularity matrix of the multilayer graph.
     """
     
     # Init
@@ -223,10 +229,15 @@ def ml_modularity_matrix(A, P, g, o, as_np=False):
     # Construct
     for i, layeri in enumerate(A.keys()):
         for j, layerj in enumerate(A.keys()):
+
             if i==j:
-                B[layeri][layerj] = np.array(A[layeri][layerj] - g*P[layeri][layerj])
+                B[layeri][layerj] = np.array(
+                    (A[layeri][layerj] - g1*P[layeri][layerj])
+                )
             else:
-                B[layeri][layerj] = np.array(o*(A[layeri][layerj] - g*P[layeri][layerj]))
+                B[layeri][layerj] = np.array(
+                    g2*(A[layeri][layerj] - g1*P[layeri][layerj])
+                )
 
     if as_np:
         B = np.block(
@@ -234,3 +245,63 @@ def ml_modularity_matrix(A, P, g, o, as_np=False):
         )
     
     return B
+
+##############
+### OTHERS ###
+##############
+
+def coclustering_matrix(C):
+    """Generate coclustering matrix of a set of community structures.
+
+    Parameters
+    ----------
+    C : numpy ndarray
+        Indicator matrix of the set of community structures. C[:, i] is the ith 
+        community structure in the set.
+
+    Returns
+    -------
+    CC : numpy ndarray
+        Coclustering matrix of the input community structures. CC[i][j] is the
+        number of times nodes i and j are found in the same communities over 
+        input community structures.
+    """
+
+    if np.ndim(C) == 1:
+        return (C[:, None] == C).astype(int)
+    else:
+        n_runs = C.shape[1]
+
+        CC = np.array(
+            [(C[:, r][:, None] == C[:, r]).astype(int) for r in range(n_runs)]
+        )
+        return np.squeeze(np.sum(CC, axis=0))
+
+def indicator_matrix(C):
+    """Generate indicator matrix for a given community structures.
+
+    Parameters
+    ----------
+    C : numpy array
+        Indicator vector of the community structure, where C[i] is the community
+        id of ith node.
+
+    Returns
+    -------
+    Z : sparse ndarray
+        Indicator matrix with dimensions nxk where n is the number of nodes and 
+        k is the number of communities. Z[i][r] is 1 if node i in rth community,
+        0 otherwise.
+    """
+
+    comm_ids, indx = np.unique(C, return_inverse=True)
+    n_comms = len(comm_ids)
+    n_nodes = len(C)
+
+    if n_comms > 1:
+        Z = sparse.csr_matrix(
+            (np.ones(n_nodes), (np.arange(n_nodes), indx)), (n_nodes, n_comms)
+        )
+        return Z
+    else:
+        return np.ones(n_nodes)

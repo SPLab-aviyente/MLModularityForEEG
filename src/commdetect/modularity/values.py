@@ -1,47 +1,28 @@
-# MLModularityForEEG - a python package for modularity based community detection
-# in multilayer EEG networks. 
-# Copyright (C) 2021 Abdullah Karaaslanli <evdilak@gmail.com>
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
 import numpy as np
 
 from . import ml_modularity_matrix, coclustering_matrix
 
 def sl_modularity_value(C, A, P, gamma):
-    """Calculate modularity values of a set of community structures for a 
-    single-layer network.
+    """Calculate modularity value of a set of community structures of a 
+    single-layer graph.
 
     Parameters
     ----------
-    C : ndarray
-        An nxd matrix whose columns is a different community structure, where
-        n is the number of nodes, and d is the number of different community 
-        structures that are used to construct co-clustering matrix. C[i, j] is 
-        the community node i belongs to in jth community structure.
-    A : ndarray, or sparse matrix
-        Adjacency matrix of the single-layer graph.
-    P : ndarray
-        Null matrix of the single-layer graph.
+    C : numpy ndarray
+        Indicator matrix of the set of community structures. C[:, i] is the ith 
+        community structure in the set.
+    A : sparse or dense ndarray
+        The adjacency matrix.
+    P : dense ndarray
+        The null matrix
     gamma : float
         Resolution parameter.
 
     Returns
     -------
-    modularities: ndarray
-        d dimensional vector of modularity values. modularities[i] is the 
-        modularity value of C[:, i].
+    mods: float or numpy array
+        Calculated modularity values. It is float if C has only community 
+        structure, else it is an array.
     """
 
     B = A - gamma*P
@@ -49,6 +30,7 @@ def sl_modularity_value(C, A, P, gamma):
     # Calculate modularity values
     if np.ndim(C) == 1:
         n_runs = 1
+        C = C[..., None]
     else:
         n_runs = C.shape[1]
 
@@ -56,36 +38,33 @@ def sl_modularity_value(C, A, P, gamma):
 
     return np.array(modularities) if n_runs > 1 else modularities[0]
 
-def ml_modularity_value(C: np.array, A: dict, P: dict, g: float, o: float) -> np.array:
-    """Calculate modularity values of a set of community structures for a 
-    multilayer network.
+def ml_modularity_value(C: np.array, A: dict, P: dict, g1: float, g2: float):
+    """Calculate modularity values of a set of community structures of multilayer
+    graph.
 
     Parameters
     ----------
-    C : ndarray
-        An nxd matrix whose columns is a different community structure, where
-        n is the number of nodes, and d is the number of different community 
-        structures that are used to construct co-clustering matrix. C[i, j] is 
-        the community node i belongs to in jth community structure. Make sure 
-        that node order in C is the same as that of given supra-adjacency matrix.
+    C : numpy ndarray
+        Indicator matrix of the set of community structures. C[:, i] is the ith 
+        community structure in the set.
     A : dict of dict
-        Supra-adjacency matrix of multilayer network as a dict of dict.
+        Supra-adjacency of the multilayer graph.
     P : dict of dict
-        Supra-null matrix of multilayer network as a dict of dict.
-    g : float
+        Supra-null matrix of the multilayer graph.
+    g1 : float
         Resolution parameter.
-    o : float
-        Interlayer scale.
+    g2 : float
+        Interlayer scale of the multilayer modularity.
 
     Returns
     -------
-    modularities: ndarray
-        d dimensional vector of modularity values. modularities[i] is the 
-        modularity value of C[:, i].
+    mods: float or numpy array
+        Calculated modularity values. It is float if C has only community 
+        structure, else it is an array.
     """
     
     # Construct modularity matrix
-    B = ml_modularity_matrix(A, P, g, o, as_np=True)
+    B = ml_modularity_matrix(A, P, g1, g2, as_np=True)
 
     # Calculate modularity values
     if np.ndim(C) == 1:
