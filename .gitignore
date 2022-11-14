@@ -1,6 +1,11 @@
 .vscode/
 hpcc/
 figures/
+scripts/
+src/eeg/
+data/eeg/
+notebooks_/
+
 .DS_Store
 
 # Byte-compiled / optimized / DLL files
