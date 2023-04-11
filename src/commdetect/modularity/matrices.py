@@ -30,6 +30,9 @@ def sl_null_matrix(A, null_model="configuration"):
 
     if null_model == "configuration":
         degrees = np.array(np.sum(A, axis=1))
+        if np.ndim(degrees) == 1:
+            degrees = degrees[:, None]
+
         twom = np.sum(degrees)
 
         if twom == 0: twom += 0.1 # in case the graph is empty

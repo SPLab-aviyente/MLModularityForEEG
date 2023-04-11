@@ -22,7 +22,7 @@ def run(A, n_comms, alpha=0.5):
     for layer in range(n_layers):
         L = np.eye(n_nodes) - normalized_adj(A[layer])
 
-        e, V = linalg.eigh(L, subset_by_index=[0, n_comms])
+        e, V = linalg.eigh(L, subset_by_index=[0, n_comms-1])
 
         L_mod += V@V.T
         L_all += L
@@ -32,7 +32,7 @@ def run(A, n_comms, alpha=0.5):
 
     # Find communities
     C = L
-    for r in range(10):
+    for r in range(20):
         _, V = linalg.eigh(C, subset_by_index=[0, n_comms-1])
 
         V /= linalg.norm(V, axis=1)[..., None] # normalize rows to unit norm

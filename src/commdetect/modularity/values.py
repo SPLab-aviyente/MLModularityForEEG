@@ -34,7 +34,7 @@ def sl_modularity_value(C, A, P, gamma):
     else:
         n_runs = C.shape[1]
 
-    modularities = [np.sum(B[coclustering_matrix(C[:, r])]) for r in range(n_runs)]
+    modularities = [np.sum(B*coclustering_matrix(C[:, r])) for r in range(n_runs)]
 
     return np.array(modularities) if n_runs > 1 else modularities[0]
 
