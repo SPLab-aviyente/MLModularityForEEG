@@ -1,3 +1,19 @@
+# MLModularityForEEG - a python package for multilayer community detection
+# Copyright (C) 2023 Abdullah Karaaslanli <evdilak@gmail.com>
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program.  If not, see <https://www.gnu.org/licenses/>.
+
 import igraph as ig
 import numpy as np
 
@@ -17,8 +33,8 @@ class MLGraph():
         Parameters
         ----------
         graph : igraph Graph, optional
-            If provided the multilayer graph will be generated from it. Vertices
-            should have an attribute named "layer", by default None
+            If provided, the multilayer graph will be generated from it. Vertices
+            should have an attribute named "layer". By default None.
 
         Raises
         ------
@@ -27,7 +43,7 @@ class MLGraph():
         """
         if graph is None: # Create an empty graph
             self.graph = ig.Graph()
-            self.layers = set()
+            self.layers = []
         else:
             if not ("layer" in graph.vertex_attributes()):
                 raise Exception("Provided graph must have vertex attribute 'layer'.")
@@ -206,7 +222,7 @@ class MLGraph():
         Returns
         -------
         G: ig.Graph
-            Intra- or inter-layer graph.
+            Interlayer graph.
         """
 
         input_checks._layer(layer1, self.layers)

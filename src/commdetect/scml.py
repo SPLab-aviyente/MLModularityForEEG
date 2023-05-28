@@ -36,7 +36,7 @@ def run(A, n_comms, alpha=0.5):
         _, V = linalg.eigh(C, subset_by_index=[0, n_comms-1])
 
         V /= linalg.norm(V, axis=1)[..., None] # normalize rows to unit norm
-        km = KMeans(n_comms)
+        km = KMeans(n_comms, n_init="auto")
     
         clusters = np.concatenate(
             [km.fit_predict(V)[..., None] for _ in range(100)], axis=1

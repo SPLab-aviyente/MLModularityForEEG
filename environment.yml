@@ -1,0 +1,15 @@
+name: mlmodularity
+channels:
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - scipy
+  - numpy
+  - python-igraph
+  - ipykernel
+  - numba
+  - matplotlib
+  - pandas
+  - leidenalg
+  - scikit-learn

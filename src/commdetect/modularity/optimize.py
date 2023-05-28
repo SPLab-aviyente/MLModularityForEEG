@@ -33,6 +33,7 @@ def find_sl_communities(A, P, gamma, n_runs=1):
 
     """
     B = sl_modularity_matrix(A, P, gamma)
+    B = (B + B.T)/2 # make sure it is symmetric
 
     rng = np.random.default_rng()
 
@@ -79,6 +80,7 @@ def find_bipartite_communities(A, P, gamma, n_runs=1):
     """
 
     B = bipartite_modularity_matrix(A, P, gamma)
+    B = (B + B.T)/2 # make sure it is symmetric
 
     rng = np.random.default_rng()
 
@@ -126,6 +128,7 @@ def find_ml_communities(A, P, g1, g2, n_runs=1):
 
     # Get the modularity matrix
     B = ml_modularity_matrix(A, P, g1, g2, as_np=True)
+    B = (B + B.T)/2 # make sure it is symmetric
 
     rng = np.random.default_rng()
 
